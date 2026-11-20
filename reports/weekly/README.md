@@ -12,20 +12,21 @@ reports/weekly/
 ├── README.md
 ├── TEMPLATE.md
 ├── minggu-01.md ... minggu-14.md  # file lama, tetap dipertahankan
-├── minggu-01/
+├── minggu-11/
 │   ├── 41424040-febri.md
 │   ├── 41424047-paulus.md
 │   ├── 41424038-binsar.md
 │   ├── 41424049-johanna.md
-│   ├── 41424007-jesika.md
-│   └── rekap-minggu-01.md
-├── minggu-02/
+│   ├── 41424007-jesica.md
+│   └── REKAP FINAL MINGGU 11/
+│       └── rekap-minggu-11.md
+├── minggu-12/
 └── ...
 ```
 
-Setiap minggu memiliki subfolder untuk laporan anggota dan rekapnya. File
-`minggu-01.md` sampai `minggu-14.md` yang sudah ada tetap dipertahankan.
-Folder minggu 11 dan 12 yang telah ada juga tidak diubah oleh panduan ini.
+Laporan minggu 11 dikerjakan pada folder `minggu-11/`; folder `minggu-12/` juga
+sudah tersedia. File `minggu-01.md` sampai `minggu-14.md` yang sudah ada tetap
+dipertahankan.
 
 ## Penamaan dan pengisian laporan
 
@@ -65,20 +66,35 @@ git switch -c docs/XX-laporan-minggu-NN
 ```
 
 Ganti `XX` dengan nomor issue checkpoint dan `NN` dengan minggu laporan yang
-sedang dikerjakan. Contoh untuk issue `#11` dan minggu 01:
-`docs/11-laporan-minggu-01`.
+sedang dikerjakan. Untuk issue `#11` dan minggu 11, nama branchnya
+`docs/11-laporan-minggu-11`.
 
-Setiap anggota menyalin template, mengisi laporannya sendiri, lalu commit dan
-push ke branch checkpoint:
+PIC push branch kerjanya agar anggota lain dapat mengisinya:
 
 ```bash
-git add reports/weekly/minggu-NN/NIM-nama.md
-git commit -m "docs: laporan minggu NN - nama (#XX)"
 git push -u origin docs/XX-laporan-minggu-NN
 ```
 
+Setelah branch tersedia di remote, setiap anggota yang memiliki akses tulis
+dapat checkout branch tersebut, lalu mengisi dan push file laporannya sendiri.
+Untuk minggu yang folder dan file laporannya sudah tersedia, edit file itu
+langsung; jangan membuat salinan dengan nama berbeda.
+
+```bash
+git fetch origin
+git switch --track origin/docs/XX-laporan-minggu-NN
+git add reports/weekly/minggu-NN/NIM-nama.md
+git commit -m "docs: laporan minggu NN - nama (#XX)"
+git push
+```
+
+Jika branch sudah pernah di-checkout, gunakan `git switch
+docs/XX-laporan-minggu-NN` sebelum mengedit. Anggota sebaiknya mengoordinasikan
+perubahan pada file masing-masing untuk menghindari konflik.
+
 Setelah semua laporan terverifikasi, PIC membuat
-`reports/weekly/minggu-NN/rekap-minggu-NN.md`, lalu membuka satu PR ke `main`
-dengan deskripsi yang merujuk dan menutup issue checkpoint (`Closes #XX`).
-Minta review minimal satu anggota lain. Merge hanya setelah mendapat
-persetujuan reviewer.
+atau memperbarui rekap minggu terkait, lalu membuka satu PR ke `main` dengan
+deskripsi yang merujuk dan menutup issue checkpoint (`Closes #XX`). Untuk
+minggu 11, pertahankan lokasi rekap yang sudah ada di
+`minggu-11/REKAP FINAL MINGGU 11/rekap-minggu-11.md`. Minta review minimal satu
+anggota lain. Merge hanya setelah mendapat persetujuan reviewer.
