@@ -1,9 +1,9 @@
 # Laporan Mingguan — Minggu NN
 
-**Nama:** Nama anggota  
-**NIM:** NIM anggota  
-**Peran:** Peran dalam proyek  
-**Periode:** DD MMM – DD MMM YYYY
+- **Nama:** Nama anggota
+- **NIM:** NIM anggota
+- **Peran:** Peran dalam proyek
+- **Periode:** DD MMM – DD MMM YYYY
 
 ## Tugas minggu ini
 

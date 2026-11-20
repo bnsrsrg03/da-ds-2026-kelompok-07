@@ -5,8 +5,8 @@ anggota belum tersedia. Lengkapi rekap setelah setiap anggota mengisi dan
 mengonfirmasi laporannya; jangan menafsirkan draf kosong sebagai tidak adanya
 aktivitas atau kendala.
 
-**Periode:** Belum dikonfirmasi  
-**Disusun oleh:** Belum ditentukan
+- **Periode:** Belum dikonfirmasi
+- **Disusun oleh:** Belum ditentukan
 
 ## Ringkasan progres tim
 
