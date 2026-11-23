@@ -84,6 +84,22 @@ uvicorn app.model.main:app --reload --port 8000
 
 Pastikan seluruh dependency yang dibutuhkan sudah terinstal sebelum menjalankan masing-masing komponen.
 
+### Validasi Kualitas Data
+
+Pasang dependency Python:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+Jalankan laporan validasi untuk dataset mentah CSV atau Excel:
+
+```powershell
+python etl/validate.py --input data/raw/diare_balita_toba_raw.csv
+```
+
+Laporan hasil validasi disimpan di `etl/reports/laporan_kualitas.json` dan `etl/reports/laporan_kualitas.csv`.
+
 ## Alur Integrasi Aplikasi
 
 Alur integrasi antarkomponen dalam proyek ini adalah:
