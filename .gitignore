@@ -8,4 +8,6 @@ __pycache__/
 !.env.example
 *.pkl
 *.joblib
+etl/reports/laporan_kualitas.json
+etl/reports/laporan_kualitas.csv
 
