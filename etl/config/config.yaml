@@ -1,0 +1,3 @@
+input: data/raw/diare_balita_toba_raw.csv
+json_report: etl/reports/laporan_kualitas.json
+csv_report: etl/reports/laporan_kualitas.csv
