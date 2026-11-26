@@ -23,7 +23,7 @@ Workbook `dataset_diare_balita.xlsx` yang disediakan tim ditetapkan sebagai sumb
 | KPI | Definisi dan rumus | Kolom utama | Catatan |
 |---|---|---|---|
 | Total catatan valid | Jumlah catatan setelah mengecualikan baris duplikat penuh dan catatan yang gagal aturan validitas yang telah disetujui. | `id_balita`, `tanggal_pengukuran`, `kecamatan`, serta kolom dengan aturan domain yang disetujui | Catatan tidak otomatis gugur hanya karena satu kolom non-inti kosong. Batas nilai/domain yang belum disetujui tidak boleh ditebak saat implementasi. |
-| Proporsi status diare | Jumlah catatan berstatus `Ya` dibagi jumlah catatan valid dengan status `Ya` atau `Tidak`, dikali 100%. | `gejala_diare_14_hari_terakhir` | Tampilkan jumlah `Ya` dan penyebut yang diketahui bersama persentase. Status kosong/tidak dikenal tidak dianggap `Tidak`. Filter status tidak diterapkan ke KPI proporsi agar hasil tidak otomatis menjadi 0% atau 100%; filter lain yang relevan tetap berlaku. |
+| Proporsi status diare | Jumlah catatan berstatus `Ya` dibagi jumlah catatan valid dengan status `Ya` atau `Tidak`, dikali 100%. | `gejala_diare_14_hari_terakhir` | Tampilkan jumlah `Ya` dan penyebut yang diketahui bersama persentase. Status kosong/tidak dikenal tidak dianggap `Tidak`. Filter status tidak diterapkan ke metrik proporsi, distribusi, tren, dan insight status diare agar hasil tidak otomatis menjadi 0% atau 100%; filter lain yang relevan tetap berlaku. |
 | Kelengkapan data | Jumlah sel terisi dan berlaku dibagi jumlah sel yang seharusnya berlaku, dikali 100%. | Semua kolom pada workbook final | Dihitung pada seluruh baris sumber sebelum filter dashboard dan sebelum catatan tidak valid dikeluarkan. Sel N/A hanya dikecualikan jika aturan applicability-nya terdokumentasi. |
 | Cakupan wilayah | Jumlah kecamatan berbeda yang memiliki catatan valid dibagi 16 kecamatan di Kabupaten Toba, dikali 100%. | `kecamatan` | Tampilkan juga jumlahnya, misalnya `x/16 kecamatan`. Filter kecamatan yang dipilih tidak mengubah KPI ini; filter relevan lainnya mengikuti cakupan data terpilih. |
 | Balita unik | Jumlah nilai `id_balita` berbeda dan tidak kosong pada catatan valid yang sesuai filter. | `id_balita` | Pengukuran berulang untuk ID yang sama dihitung satu balita. |
@@ -35,7 +35,7 @@ Workbook `dataset_diare_balita.xlsx` yang disediakan tim ditetapkan sebagai sumb
 - Kelompok umur menggunakan `usia_balita_bulan` dengan kelompok: `<6`, `6–11`, `12–23`, `24–35`, `36–47`, dan `48–59` bulan.
 - Jenis kelamin menggunakan `jenis_kelamin`.
 - Status diare menggunakan `gejala_diare_14_hari_terakhir`.
-- Filter diterapkan pada KPI dan visualisasi yang relevan. Kelengkapan dihitung untuk seluruh sumber data dan tidak berubah oleh filter. Cakupan wilayah mengabaikan pilihan kecamatan tunggal agar tetap menunjukkan cakupan wilayah dataset.
+- Filter diterapkan pada KPI dan visualisasi yang relevan. Filter status menyaring catatan, tabel, dan metrik umum, tetapi tidak mengubah metrik/visualisasi proporsi dan tren status diare. Kelengkapan dihitung untuk seluruh sumber data dan tidak berubah oleh filter. Cakupan wilayah mengabaikan pilihan kecamatan tunggal agar tetap menunjukkan cakupan wilayah dataset.
 
 ## Acuan cakupan wilayah
 
