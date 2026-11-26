@@ -15,6 +15,7 @@ const Icon = ({ name, size = 20 }) => {
     download: <><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></>,
     model: <><circle cx="12" cy="12" r="3" /><circle cx="5" cy="5" r="2" /><circle cx="19" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle cx="19" cy="19" r="2" /><path d="M7 6l3 4M17 6l-3 4M7 18l3-4M17 18l-3-4" /></>,
     report: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M8 13h8M8 17h5" /></>,
+    chevron: <path d="m6 9 6 6 6-6" />,
   }
 
   return (
@@ -23,14 +24,6 @@ const Icon = ({ name, size = 20 }) => {
     </svg>
   )
 }
-
-const navItems = [
-  { label: 'Dashboard', icon: 'grid' },
-  { label: 'Analisis', icon: 'chart' },
-  { label: 'Dataset', icon: 'database' },
-  { label: 'Model', icon: 'model' },
-  { label: 'Laporan', icon: 'report' },
-]
 
 const dashboardSections = [
   { label: 'Overview', icon: 'grid' },
@@ -42,6 +35,30 @@ const dashboardSections = [
   { label: 'Modul Klasifikasi', icon: 'model' },
   { label: 'Evaluasi Model', icon: 'report' },
   { label: 'Tentang Data', icon: 'database' },
+]
+
+const navItems = [
+  { label: 'Dashboard', icon: 'grid', section: 'Overview' },
+  { label: 'Data Import', icon: 'download', section: 'Tentang Data' },
+  { label: 'Data Cleaning', icon: 'search' },
+  { label: 'Data Analysis', icon: 'chart', section: 'Storytelling / Insight' },
+  {
+    label: 'Data Visualization',
+    icon: 'chart',
+    submenuId: 'visualization-submenu',
+    children: dashboardSections.filter(({ label }) =>
+      ['Profil Balita', 'Faktor Gizi', 'Kesehatan Keluarga', 'Wilayah & Waktu'].includes(label)
+    ),
+  },
+  {
+    label: 'Prediction',
+    icon: 'model',
+    submenuId: 'prediction-submenu',
+    children: dashboardSections.filter(({ label }) =>
+      ['Modul Klasifikasi', 'Evaluasi Model'].includes(label)
+    ),
+  },
+  { label: 'Reports', icon: 'report' },
 ]
 
 function parseCsv(text) {
@@ -124,6 +141,7 @@ function ageGroup(months) {
 function App() {
   const [activeNav, setActiveNav] = useState('Dashboard')
   const [activeDashboardSection, setActiveDashboardSection] = useState('Overview')
+  const [expandedMenu, setExpandedMenu] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [period, setPeriod] = useState('12 bulan')
   const [district, setDistrict] = useState('Semua kecamatan')
@@ -471,20 +489,82 @@ function App() {
 
         <nav className="navigation" aria-label="Navigasi utama">
           <p className="nav-heading">MENU UTAMA</p>
-          {navItems.map((item) => (
-            <button
-              type="button"
-              key={item.label}
-              className={activeNav === item.label ? 'nav-item active' : 'nav-item'}
-              onClick={() => {
-                setActiveNav('Dashboard')
-                setActiveDashboardSection('Overview')
-                setSidebarOpen(false)
-              }}
-            >
-              <Icon name={item.icon} /><span>{item.label}</span>
-            </button>
-          ))}
+          {navItems.map((item) => {
+            if (item.children) {
+              const expanded = expandedMenu === item.label
+
+              return (
+                <div className="nav-group" key={item.label}>
+                  <button
+                    type="button"
+                    className={activeNav === item.label ? 'nav-item active' : 'nav-item'}
+                    onClick={() => {
+                      setExpandedMenu((current) =>
+                        current === item.label ? null : item.label
+                      )
+                    }}
+                    aria-expanded={expanded}
+                    aria-controls={item.submenuId}
+                  >
+                    <Icon name={item.icon} />
+                    <span>{item.label}</span>
+                    <span className={`nav-chevron ${expanded ? 'expanded' : ''}`}>
+                      <Icon name="chevron" size={16} />
+                    </span>
+                  </button>
+                  <div
+                    id={item.submenuId}
+                    className={`nav-submenu ${expanded ? 'open' : ''}`}
+                    aria-hidden={!expanded}
+                  >
+                    <div className="nav-submenu-inner">
+                      {item.children.map((section) => (
+                        <button
+                          type="button"
+                          key={section.label}
+                          className={
+                            activeDashboardSection === section.label
+                              ? 'nav-submenu-item active'
+                              : 'nav-submenu-item'
+                          }
+                          onClick={() => {
+                            setActiveNav(item.label)
+                            setActiveDashboardSection(section.label)
+                            setSidebarOpen(false)
+                          }}
+                          tabIndex={expanded ? 0 : -1}
+                        >
+                          <Icon name={section.icon} size={15} />
+                          <span>{section.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <button
+                type="button"
+                key={item.label}
+                className={activeNav === item.label ? 'nav-item active' : 'nav-item'}
+                onClick={() => {
+                  if (item.section) {
+                    setActiveNav(item.label)
+                    setActiveDashboardSection(item.section)
+                  } else {
+                    setActiveNav('Dashboard')
+                    setActiveDashboardSection('Overview')
+                  }
+                  setExpandedMenu(null)
+                  setSidebarOpen(false)
+                }}
+              >
+                <Icon name={item.icon} /><span>{item.label}</span>
+              </button>
+            )
+          })}
         </nav>
 
         <div className="sidebar-footer">
@@ -544,7 +624,7 @@ function App() {
           <div className="page-heading">
             <div>
               <p className="eyebrow">DASHBOARD ANALITIK</p>
-              <h1>Dashboard</h1>
+              <h1>{activeNav}</h1>
             </div>
 
             <div className="global-filters">
@@ -587,26 +667,6 @@ function App() {
                   : `${stats.count.toLocaleString('id-ID')} catatan; tanggal pengukuran terbaru ${periodLabel}; wilayah ${district}.`}
             </span>
           </div>
-
-          {activeNav === 'Dashboard' && (
-            <nav className="dashboard-tabs" aria-label="Bagian dashboard">
-              {dashboardSections.map((item) => (
-                <button
-                  type="button"
-                  key={item.label}
-                  className={
-                    activeDashboardSection === item.label
-                      ? 'dashboard-tab active'
-                      : 'dashboard-tab'
-                  }
-                  onClick={() => setActiveDashboardSection(item.label)}
-                >
-                  <Icon name={item.icon} size={16} />
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </nav>
-          )}
 
           {activeDashboardSection === 'Overview' && (
             <>
