@@ -37,6 +37,15 @@ const dashboardSections = [
   { label: 'Tentang Data', icon: 'database' },
 ]
 
+const ageGroupOptions = [
+  '< 6 bulan',
+  '6–11 bulan',
+  '12–23 bulan',
+  '24–35 bulan',
+  '36–47 bulan',
+  '48–59 bulan',
+]
+
 const navItems = [
   { label: 'Dashboard', icon: 'grid', section: 'Overview' },
   { label: 'Data Import', icon: 'download', section: 'Tentang Data' },
@@ -129,13 +138,27 @@ function categoryStats(records, field, labels) {
 }
 
 function ageGroup(months) {
-  if (!Number.isFinite(months)) return 'Tidak valid'
+  if (!Number.isFinite(months) || months < 0 || months >= 60) return 'Tidak valid'
   if (months < 6) return '< 6 bulan'
   if (months < 12) return '6–11 bulan'
   if (months < 24) return '12–23 bulan'
   if (months < 36) return '24–35 bulan'
   if (months < 48) return '36–47 bulan'
   return '48–59 bulan'
+}
+
+function normalizeSex(value) {
+  const normalized = String(value ?? '').trim().toLocaleLowerCase('id')
+  if (['l', 'laki-laki', 'laki laki'].includes(normalized)) return 'L'
+  if (['p', 'perempuan'].includes(normalized)) return 'P'
+  return null
+}
+
+function normalizeDiarrheaStatus(value) {
+  const normalized = String(value ?? '').trim().toLocaleLowerCase('id')
+  if (normalized === 'ya') return 'Ya'
+  if (normalized === 'tidak') return 'Tidak'
+  return null
 }
 
 function App() {
@@ -145,6 +168,9 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [period, setPeriod] = useState('12 bulan')
   const [district, setDistrict] = useState('Semua kecamatan')
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState('Semua kelompok')
+  const [selectedSex, setSelectedSex] = useState('Semua')
+  const [selectedDiarrheaStatus, setSelectedDiarrheaStatus] = useState('Semua status')
   const [search, setSearch] = useState('')
   const [nutritionFilter, setNutritionFilter] = useState('Semua')
   const [records, setRecords] = useState([])
@@ -200,7 +226,7 @@ function App() {
     })
   }, [records, latestDate, period])
 
-  const filteredRecords = useMemo(
+  const scopedRecords = useMemo(
     () => periodRecords.filter((item) => {
       const districtMatch =
         district === 'Semua kecamatan' || item.kecamatan === district
@@ -211,15 +237,48 @@ function App() {
         [item.id_balita, item.kecamatan, item.tanggal_pengukuran]
           .some((value) => (value || '').toLowerCase().includes(query))
 
-      return districtMatch && searchMatch
+      const itemAgeGroup = ageGroup(validNumber(item.usia_balita_bulan))
+      const ageMatch =
+        selectedAgeGroup === 'Semua kelompok'
+        || (selectedAgeGroup === 'Tidak diketahui'
+          ? itemAgeGroup === 'Tidak valid'
+          : itemAgeGroup === selectedAgeGroup)
+
+      const itemSex = normalizeSex(item.jenis_kelamin)
+      const sexMatch =
+        selectedSex === 'Semua'
+        || (selectedSex === 'Tidak diketahui'
+          ? itemSex === null
+          : itemSex === selectedSex)
+
+      return districtMatch && searchMatch && ageMatch && sexMatch
     }),
-    [periodRecords, district, search]
+    [periodRecords, district, search, selectedAgeGroup, selectedSex]
+  )
+
+  const filteredRecords = useMemo(
+    () => scopedRecords.filter((item) => {
+      if (selectedDiarrheaStatus === 'Semua status') return true
+
+      const status = normalizeDiarrheaStatus(item.gejala_diare_14_hari_terakhir)
+      return selectedDiarrheaStatus === 'Tidak diketahui'
+        ? status === null
+        : status === selectedDiarrheaStatus
+    }),
+    [scopedRecords, selectedDiarrheaStatus]
+  )
+
+  const outcomeRecords = useMemo(
+    () => scopedRecords.filter(
+      (item) => normalizeDiarrheaStatus(item.gejala_diare_14_hari_terakhir) !== null
+    ),
+    [scopedRecords]
   )
 
   const stats = useMemo(() => {
     const count = filteredRecords.length
-    const diarrheaCount = filteredRecords.filter(
-      (item) => item.gejala_diare_14_hari_terakhir === 'Ya'
+    const diarrheaCount = outcomeRecords.filter(
+      (item) => normalizeDiarrheaStatus(item.gejala_diare_14_hari_terakhir) === 'Ya'
     ).length
     const uniqueBalita = new Set(
       filteredRecords.map((item) => item.id_balita).filter(Boolean)
@@ -229,17 +288,19 @@ function App() {
       count,
       uniqueBalita,
       diarrheaCount,
-      diarrheaPercent: percentage(diarrheaCount, count),
+      diarrheaDenominator: outcomeRecords.length,
+      nonDiarrheaCount: outcomeRecords.length - diarrheaCount,
+      diarrheaPercent: percentage(diarrheaCount, outcomeRecords.length),
       averageAge: average(filteredRecords, 'usia_balita_bulan'),
       averageWeight: average(filteredRecords, 'berat_badan_kg'),
       averageHeight: average(filteredRecords, 'panjang_tinggi_badan_cm'),
     }
-  }, [filteredRecords])
+  }, [filteredRecords, outcomeRecords])
 
   const trendData = useMemo(() => {
     const groups = new Map()
 
-    filteredRecords.forEach((item) => {
+    outcomeRecords.forEach((item) => {
       const date = new Date(`${item.tanggal_pengukuran}T00:00:00`)
       if (Number.isNaN(date.getTime())) return
 
@@ -248,7 +309,7 @@ function App() {
 
       current.total += 1
 
-      if (item.gejala_diare_14_hari_terakhir === 'Ya') {
+      if (normalizeDiarrheaStatus(item.gejala_diare_14_hari_terakhir) === 'Ya') {
         current.diarrhea += 1
       }
 
@@ -272,13 +333,13 @@ function App() {
           total: value.total,
         }
       })
-  }, [filteredRecords])
+  }, [outcomeRecords])
 
   // Menghitung ringkasan data berdasarkan kecamatan.
   const districtStats = useMemo(() => {
     const groups = new Map()
 
-    filteredRecords.forEach((item) => {
+    outcomeRecords.forEach((item) => {
       const name = item.kecamatan || 'Tidak diketahui'
       const current = groups.get(name) || {
         name,
@@ -288,7 +349,7 @@ function App() {
 
       current.total += 1
 
-      if (item.gejala_diare_14_hari_terakhir === 'Ya') {
+      if (normalizeDiarrheaStatus(item.gejala_diare_14_hari_terakhir) === 'Ya') {
         current.diarrhea += 1
       }
 
@@ -301,12 +362,12 @@ function App() {
         percent: percentage(item.diarrhea, item.total),
       }))
       .sort((a, b) => b.total - a.total)
-  }, [filteredRecords])
+  }, [outcomeRecords])
 
   // Menghitung insight berdasarkan data yang sedang difilter.
   const insightStats = useMemo(() => {
-    const diarrheaRecords = filteredRecords.filter(
-      (item) => item.gejala_diare_14_hari_terakhir === 'Ya'
+    const diarrheaRecords = outcomeRecords.filter(
+      (item) => normalizeDiarrheaStatus(item.gejala_diare_14_hari_terakhir) === 'Ya'
     )
 
     const highestDistrict = [...districtStats]
@@ -334,19 +395,19 @@ function App() {
       diarrheaCount: diarrheaRecords.length,
       diarrheaPercent: percentage(
         diarrheaRecords.length,
-        filteredRecords.length
+        outcomeRecords.length
       ),
       highestDistrict,
       highestMonth,
       highestAgeGroup,
     }
-  }, [filteredRecords, districtStats, trendData])
+  }, [outcomeRecords, districtStats, trendData])
 
   const diarrheaDistribution = useMemo(() => [
     {
       name: 'Tidak diare',
-      count: stats.count - stats.diarrheaCount,
-      percent: percentage(stats.count - stats.diarrheaCount, stats.count),
+      count: stats.nonDiarrheaCount,
+      percent: percentage(stats.nonDiarrheaCount, stats.diarrheaDenominator),
       color: '#22b8a7',
     },
     {
@@ -358,16 +419,7 @@ function App() {
   ], [stats])
 
   const ageDistribution = useMemo(() => {
-    const labels = [
-      '< 6 bulan',
-      '6–11 bulan',
-      '12–23 bulan',
-      '24–35 bulan',
-      '36–47 bulan',
-      '48–59 bulan',
-    ]
-
-    return labels.map((label) => {
+    return ageGroupOptions.map((label) => {
       const count = filteredRecords.filter(
         (item) => ageGroup(validNumber(item.usia_balita_bulan)) === label
       ).length
@@ -383,15 +435,33 @@ function App() {
   const sexDistribution = useMemo(() => [
     {
       name: 'Laki-laki',
-      count: filteredRecords.filter((item) => item.jenis_kelamin === 'L').length,
+      count: filteredRecords.filter((item) => normalizeSex(item.jenis_kelamin) === 'L').length,
       color: '#22b8a7',
     },
     {
       name: 'Perempuan',
-      count: filteredRecords.filter((item) => item.jenis_kelamin === 'P').length,
+      count: filteredRecords.filter((item) => normalizeSex(item.jenis_kelamin) === 'P').length,
       color: '#6c7adf',
     },
+    {
+      name: 'Tidak diketahui',
+      count: filteredRecords.filter((item) => normalizeSex(item.jenis_kelamin) === null).length,
+      color: '#ef7c69',
+    },
   ], [filteredRecords])
+
+  const sexDonutBackground = useMemo(() => {
+    if (!stats.count) return '#e8eeeb'
+
+    let offset = 0
+    const segments = sexDistribution.map((item) => {
+      const start = offset
+      offset += item.count / stats.count * 100
+      return `${item.color} ${start}% ${offset}%`
+    })
+
+    return `conic-gradient(${segments.join(', ')})`
+  }, [sexDistribution, stats.count])
 
   const bmiStats = useMemo(() => {
     const values = filteredRecords.map((item) => {
@@ -416,6 +486,14 @@ function App() {
       (item) => item.masih_mendapat_asi === nutritionFilter
     )
   }, [filteredRecords, nutritionFilter])
+
+  const nutritionOutcomeRecords = useMemo(
+    () => scopedRecords.filter((item) => (
+      normalizeDiarrheaStatus(item.gejala_diare_14_hari_terakhir) !== null
+      && (nutritionFilter === 'Semua' || item.masih_mendapat_asi === nutritionFilter)
+    )),
+    [scopedRecords, nutritionFilter]
+  )
 
   const nutritionBmiStats = useMemo(() => {
     const values = nutritionRecords.map((item) => {
@@ -641,8 +719,8 @@ function App() {
                 </select>
               </label>
 
-              <label className="period-control">
-                <Icon name="calendar" size={17} />
+              <label className="filter-control">
+                <span>Periode</span>
                 <select
                   value={period}
                   onChange={(event) => setPeriod(event.target.value)}
@@ -653,8 +731,58 @@ function App() {
                   <option>12 bulan</option>
                 </select>
               </label>
+
+              <label className="filter-control">
+                <span>Kelompok umur</span>
+                <select
+                  value={selectedAgeGroup}
+                  onChange={(event) => setSelectedAgeGroup(event.target.value)}
+                  aria-label="Filter kelompok umur"
+                >
+                  <option>Semua kelompok</option>
+                  {ageGroupOptions.map((option) => (
+                    <option key={option}>{option}</option>
+                  ))}
+                  <option>Tidak diketahui</option>
+                </select>
+              </label>
+
+              <label className="filter-control">
+                <span>Jenis kelamin</span>
+                <select
+                  value={selectedSex}
+                  onChange={(event) => setSelectedSex(event.target.value)}
+                  aria-label="Filter jenis kelamin"
+                >
+                  <option value="Semua">Semua</option>
+                  <option value="L">Laki-laki</option>
+                  <option value="P">Perempuan</option>
+                  <option>Tidak diketahui</option>
+                </select>
+              </label>
+
+              <label className="filter-control">
+                <span>Status diare</span>
+                <select
+                  value={selectedDiarrheaStatus}
+                  onChange={(event) => setSelectedDiarrheaStatus(event.target.value)}
+                  aria-label="Filter status diare"
+                >
+                  <option>Semua status</option>
+                  <option value="Ya">Diare</option>
+                  <option value="Tidak">Tidak diare</option>
+                  <option>Tidak diketahui</option>
+                </select>
+              </label>
             </div>
           </div>
+
+          {selectedDiarrheaStatus !== 'Semua status' && (
+            <p className="filter-note" role="status">
+              Filter status menyaring catatan dan KPI umum; proporsi, distribusi, serta tren
+              diare tetap memakai semua catatan dengan status diketahui.
+            </p>
+          )}
 
           <div className="data-warning" role="status">
             <span className="warning-dot" />
@@ -681,14 +809,16 @@ function App() {
                   <span className="metric-caption">{stats.uniqueBalita.toLocaleString('id-ID')} ID balita unik terdaftar</span>
                 </article>
 
-                <article className="metric-card" title="Balita yang gejala diare dalam 14 hari terakhir bernilai Ya dibagi seluruh catatan.">
+                <article className="metric-card" title="Catatan dengan status Ya dibagi catatan valid yang statusnya diketahui.">
                   <div className="metric-top">
                     <span className="metric-icon blue"><Icon name="chart" /></span>
                     <span className="metric-change positive">{stats.diarrheaPercent.toFixed(1)}%</span>
                   </div>
                   <p>Gejala Diare 14 Hari</p>
                   <h2>{stats.diarrheaCount.toLocaleString('id-ID')}</h2>
-                  <span className="metric-caption">proporsi dari catatan terfilter</span>
+                  <span className="metric-caption">
+                    dari {stats.diarrheaDenominator.toLocaleString('id-ID')} catatan dengan status diketahui
+                  </span>
                 </article>
 
                 <article className="metric-card" title="Rata-rata usia yang tersedia pada catatan terfilter.">
@@ -724,7 +854,7 @@ function App() {
                   <div className="chart-summary">
                     <strong>{stats.diarrheaPercent.toFixed(1)}%</strong>
                     <span className="summary-increase">
-                      {stats.diarrheaCount.toLocaleString('id-ID')} dari {stats.count.toLocaleString('id-ID')} catatan
+                      {stats.diarrheaCount.toLocaleString('id-ID')} dari {stats.diarrheaDenominator.toLocaleString('id-ID')} catatan
                     </span>
                   </div>
 
@@ -810,8 +940,8 @@ function App() {
                       }}
                     >
                       <div className="donut-center">
-                        <strong>{stats.count.toLocaleString('id-ID')}</strong>
-                        <span>Catatan</span>
+                        <strong>{stats.diarrheaDenominator.toLocaleString('id-ID')}</strong>
+                        <span>Status diketahui</span>
                       </div>
                     </div>
                   </div>
@@ -957,7 +1087,7 @@ function App() {
                       role="img"
                       aria-label="Distribusi jenis kelamin"
                       style={{
-                        background: `conic-gradient(#22b8a7 0 ${stats.count ? sexDistribution[0].count / stats.count * 100 : 0}%, #6c7adf ${stats.count ? sexDistribution[0].count / stats.count * 100 : 0}% 100%)`,
+                        background: sexDonutBackground,
                       }}
                     >
                       <div className="donut-center">
@@ -1089,7 +1219,7 @@ function App() {
                     <span className="metric-change positive">Proporsi</span>
                   </div>
                   <p>Gejala Diare</p>
-                  <h2>{percentage(nutritionRecords.filter((item) => item.gejala_diare_14_hari_terakhir === 'Ya').length, nutritionRecords.length).toFixed(1)}%</h2>
+                  <h2>{percentage(nutritionOutcomeRecords.filter((item) => normalizeDiarrheaStatus(item.gejala_diare_14_hari_terakhir) === 'Ya').length, nutritionOutcomeRecords.length).toFixed(1)}%</h2>
                   <span className="metric-caption">dalam subset status ASI</span>
                 </article>
               </section>
@@ -1200,10 +1330,15 @@ function App() {
                   { label: 'Cuci Tangan Pakai Sabun', field: 'cuci_tangan_pakai_sabun', icon: 'users', className: 'blue' },
                   { label: 'Gejala Diare', field: 'gejala_diare_14_hari_terakhir', icon: 'chart', className: 'coral' },
                 ].map((item) => {
-                  const yesCount = filteredRecords.filter(
-                    (record) => record[item.field] === 'Ya'
+                  const metricRecords = item.field === 'gejala_diare_14_hari_terakhir'
+                    ? outcomeRecords
+                    : filteredRecords
+                  const yesCount = metricRecords.filter(
+                    (record) => item.field === 'gejala_diare_14_hari_terakhir'
+                      ? normalizeDiarrheaStatus(record[item.field]) === 'Ya'
+                      : record[item.field] === 'Ya'
                   ).length
-                  const yesPercent = percentage(yesCount, filteredRecords.length)
+                  const yesPercent = percentage(yesCount, metricRecords.length)
 
                   return (
                     <article className="metric-card" key={item.field}>
@@ -1585,7 +1720,7 @@ function App() {
 
                   <div className="definition-list">
                     <p>
-                      Dari <strong>{stats.count.toLocaleString('id-ID')} catatan</strong>
+                      Dari <strong>{outcomeRecords.length.toLocaleString('id-ID')} catatan dengan status diketahui</strong>
                       {' '}yang memenuhi filter, terdapat{' '}
                       <strong>{insightStats.diarrheaCount.toLocaleString('id-ID')} catatan</strong>
                       {' '}dengan gejala diare dalam 14 hari terakhir.
